@@ -5,78 +5,69 @@
   <title>Dungeon Depths</title>
   <style>
     /* your entire CSS here */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #0a0a0f; color: #e0d8c0; font-family: 'Courier New', monospace; user-select: none; }
+        #app { display: flex; flex-direction: column; align-items: center; padding: 16px; }
+        h1 { font-size: 20px; font-weight: 500; color: #c9a84c; letter-spacing: 2px; margin-bottom: 12px; text-transform: uppercase; }
+        #game-area { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+        #canvas-wrap { border: 1px solid #3a3020; }
+        canvas { display: block; image-rendering: pixelated; }
+        #sidebar { width: 200px; display: flex; flex-direction: column; gap: 8px; }
+        .panel { background: #12100a; border: 1px solid #3a3020; border-radius: 6px; padding: 10px 12px; }
+        .panel-title { font-size: 11px; color: #7a6a40; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .stat-row { display: flex; justify-content: space-between; font-size: 13px; margin: 3px 0; }
+        .stat-label { color: #8a7a5a; }
+        .stat-val { color: #e0d8c0; font-weight: 500; }
+        .bar-wrap { height: 7px; border-radius: 4px; margin: 3px 0 7px; overflow: hidden; }
+        .hp-bg { background: #2a1a1a; } .hp-fill { height: 100%; background: #b03030; border-radius: 4px; transition: width 0.3s; }
+        .xp-bg { background: #1a1a2a; } .xp-fill { height: 100%; background: #5050b0; border-radius: 4px; transition: width 0.3s; }
+        #log { height: 120px; overflow-y: auto; font-size: 12px; line-height: 1.6; }
+        #log p { margin: 0; padding: 1px 0; border-bottom: 1px solid #1a1810; }
+        .log-dmg { color: #e06050; } .log-good { color: #60c060; } .log-item { color: #c9a84c; } .log-info { color: #7090b0; } .log-death { color: #ff4444; font-weight: 500; }
+        #controls { font-size: 12px; color: #5a5040; text-align: center; margin-top: 6px; line-height: 1.8; }
+        #inv-slots { display: flex; flex-wrap: wrap; gap: 4px; }
+        .inv-slot { width: 26px; height: 26px; background: #1a1810; border: 1px solid #3a3020; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 15px; position: relative; cursor: default; }
+        .inv-slot.equipped { border-color: #c9a84c; }
+        .tip { display: none; position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: #0a0a0f; border: 1px solid #5a4020; border-radius: 4px; padding: 3px 7px; font-size: 11px; color: #e0d8c0; white-space: nowrap; z-index: 20; pointer-events: none; }
+        .inv-slot:hover .tip { display: block; }
+        #overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.88); display: flex; align-items: center; justify-content: center; z-index: 30; }
+        .modal { background: #12100a; border: 1px solid #5a4020; border-radius: 8px; padding: 28px 36px; text-align: center; max-width: 300px; }
+        .modal h2 { font-size: 26px; color: #c9a84c; margin-bottom: 8px; }
+        .modal p { color: #8a7a5a; font-size: 13px; margin-bottom: 18px; line-height: 1.6; }
+        .btn { background: #2a2010; border: 1px solid #6a5030; color: #c9a84c; padding: 9px 24px; font-family: 'Courier New', monospace; font-size: 13px; cursor: pointer; border-radius: 4px; letter-spacing: 1px; }
+        .btn:hover { background: #3a2e18; }
+        #battle-screen { display: none; background: #0d0b07; border: 2px solid #5a4020; border-radius: 8px; width: 480px; padding: 0; overflow: hidden; }
+        #battle-screen.active { display: block; }
+        #battle-header { background: #1a1510; padding: 8px 16px; font-size: 13px; color: #c9a84c; letter-spacing: 1px; border-bottom: 1px solid #3a2810; text-align: center; text-transform: uppercase; }
+        #battle-field { display: flex; justify-content: space-between; align-items: flex-end; padding: 16px 24px; background: #0f0d08; min-height: 160px; }
+        .combatant { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 140px; }
+        .sprite { font-size: 56px; line-height: 1; text-align: center; }
+        .sprite.shake { animation: shake 0.3s; }
+        .sprite.flash { animation: flash 0.3s; }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+        @keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.2} }
+        .c-name { font-size: 13px; font-weight: 500; color: #e0d8c0; text-align: center; }
+        .c-hp-bar { width: 120px; height: 10px; background: #2a1a1a; border-radius: 5px; overflow: hidden; border: 1px solid #3a2020; }
+        .c-hp-fill { height: 100%; background: #5cd060; border-radius: 5px; transition: width 0.4s; }
+        .c-hp-fill.mid { background: #d0c040; }
+        .c-hp-fill.low { background: #d04040; }
+        .c-hp-text { font-size: 11px; color: #8a7a5a; text-align: center; }
+        #battle-log { background: #0a0908; border-top: 1px solid #2a2010; border-bottom: 1px solid #2a2010; min-height: 48px; padding: 8px 16px; font-size: 13px; line-height: 1.6; color: #c8b880; text-align: center; }
+        #battle-actions { display: flex; gap: 8px; padding: 12px 16px; background: #0d0b07; flex-wrap: wrap; justify-content: center; }
+        .battle-btn { background: #1e1a10; border: 1px solid #5a4020; color: #c9a84c; padding: 8px 18px; font-family: 'Courier New', monospace; font-size: 13px; cursor: pointer; border-radius: 4px; flex: 1; min-width: 90px; }
+        .battle-btn:hover:not(:disabled) { background: #2e2818; }
+        .battle-btn:disabled { opacity: 0.4; cursor: default; }
+        .battle-btn.flee { color: #a07040; border-color: #4a3820; }
+        .battle-btn.potion { color: #60a060; border-color: #305030; }
+        .dmg-popup { position: absolute; pointer-events: none; font-size: 18px; font-weight: 500; animation: popUp 0.8s ease-out forwards; z-index: 50; }
+        @keyframes popUp { 0%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-40px)} }
+      
   </style>
 </head>
 
 <body>
   <!-- your entire HTML here -->
-  <script>
-    // your entire JS here
-  </script>
-</body>
-</html>
-
-
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #0a0a0f; color: #e0d8c0; font-family: 'Courier New', monospace; user-select: none; }
-#app { display: flex; flex-direction: column; align-items: center; padding: 16px; }
-h1 { font-size: 20px; font-weight: 500; color: #c9a84c; letter-spacing: 2px; margin-bottom: 12px; text-transform: uppercase; }
-#game-area { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
-#canvas-wrap { border: 1px solid #3a3020; }
-canvas { display: block; image-rendering: pixelated; }
-#sidebar { width: 200px; display: flex; flex-direction: column; gap: 8px; }
-.panel { background: #12100a; border: 1px solid #3a3020; border-radius: 6px; padding: 10px 12px; }
-.panel-title { font-size: 11px; color: #7a6a40; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
-.stat-row { display: flex; justify-content: space-between; font-size: 13px; margin: 3px 0; }
-.stat-label { color: #8a7a5a; }
-.stat-val { color: #e0d8c0; font-weight: 500; }
-.bar-wrap { height: 7px; border-radius: 4px; margin: 3px 0 7px; overflow: hidden; }
-.hp-bg { background: #2a1a1a; } .hp-fill { height: 100%; background: #b03030; border-radius: 4px; transition: width 0.3s; }
-.xp-bg { background: #1a1a2a; } .xp-fill { height: 100%; background: #5050b0; border-radius: 4px; transition: width 0.3s; }
-#log { height: 120px; overflow-y: auto; font-size: 12px; line-height: 1.6; }
-#log p { margin: 0; padding: 1px 0; border-bottom: 1px solid #1a1810; }
-.log-dmg { color: #e06050; } .log-good { color: #60c060; } .log-item { color: #c9a84c; } .log-info { color: #7090b0; } .log-death { color: #ff4444; font-weight: 500; }
-#controls { font-size: 12px; color: #5a5040; text-align: center; margin-top: 6px; line-height: 1.8; }
-#inv-slots { display: flex; flex-wrap: wrap; gap: 4px; }
-.inv-slot { width: 26px; height: 26px; background: #1a1810; border: 1px solid #3a3020; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 15px; position: relative; cursor: default; }
-.inv-slot.equipped { border-color: #c9a84c; }
-.tip { display: none; position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: #0a0a0f; border: 1px solid #5a4020; border-radius: 4px; padding: 3px 7px; font-size: 11px; color: #e0d8c0; white-space: nowrap; z-index: 20; pointer-events: none; }
-.inv-slot:hover .tip { display: block; }
-#overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.88); display: flex; align-items: center; justify-content: center; z-index: 30; }
-.modal { background: #12100a; border: 1px solid #5a4020; border-radius: 8px; padding: 28px 36px; text-align: center; max-width: 300px; }
-.modal h2 { font-size: 26px; color: #c9a84c; margin-bottom: 8px; }
-.modal p { color: #8a7a5a; font-size: 13px; margin-bottom: 18px; line-height: 1.6; }
-.btn { background: #2a2010; border: 1px solid #6a5030; color: #c9a84c; padding: 9px 24px; font-family: 'Courier New', monospace; font-size: 13px; cursor: pointer; border-radius: 4px; letter-spacing: 1px; }
-.btn:hover { background: #3a2e18; }
-
-#battle-screen { display: none; background: #0d0b07; border: 2px solid #5a4020; border-radius: 8px; width: 480px; padding: 0; overflow: hidden; }
-#battle-screen.active { display: block; }
-#battle-header { background: #1a1510; padding: 8px 16px; font-size: 13px; color: #c9a84c; letter-spacing: 1px; border-bottom: 1px solid #3a2810; text-align: center; text-transform: uppercase; }
-#battle-field { display: flex; justify-content: space-between; align-items: flex-end; padding: 16px 24px; background: #0f0d08; min-height: 160px; }
-.combatant { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 140px; }
-.sprite { font-size: 56px; line-height: 1; text-align: center; }
-.sprite.shake { animation: shake 0.3s; }
-.sprite.flash { animation: flash 0.3s; }
-@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
-@keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.2} }
-.c-name { font-size: 13px; font-weight: 500; color: #e0d8c0; text-align: center; }
-.c-hp-bar { width: 120px; height: 10px; background: #2a1a1a; border-radius: 5px; overflow: hidden; border: 1px solid #3a2020; }
-.c-hp-fill { height: 100%; background: #5cd060; border-radius: 5px; transition: width 0.4s; }
-.c-hp-fill.mid { background: #d0c040; }
-.c-hp-fill.low { background: #d04040; }
-.c-hp-text { font-size: 11px; color: #8a7a5a; text-align: center; }
-#battle-log { background: #0a0908; border-top: 1px solid #2a2010; border-bottom: 1px solid #2a2010; min-height: 48px; padding: 8px 16px; font-size: 13px; line-height: 1.6; color: #c8b880; text-align: center; }
-#battle-actions { display: flex; gap: 8px; padding: 12px 16px; background: #0d0b07; flex-wrap: wrap; justify-content: center; }
-.battle-btn { background: #1e1a10; border: 1px solid #5a4020; color: #c9a84c; padding: 8px 18px; font-family: 'Courier New', monospace; font-size: 13px; cursor: pointer; border-radius: 4px; flex: 1; min-width: 90px; }
-.battle-btn:hover:not(:disabled) { background: #2e2818; }
-.battle-btn:disabled { opacity: 0.4; cursor: default; }
-.battle-btn.flee { color: #a07040; border-color: #4a3820; }
-.battle-btn.potion { color: #60a060; border-color: #305030; }
-.dmg-popup { position: absolute; pointer-events: none; font-size: 18px; font-weight: 500; animation: popUp 0.8s ease-out forwards; z-index: 50; }
-@keyframes popUp { 0%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-40px)} }
-</style>
-
+  
 <div id="app">
   <h1>⚔ Dungeon Depths</h1>
   <div id="game-area">
@@ -141,7 +132,8 @@ canvas { display: block; image-rendering: pixelated; }
   </div>
 </div>
 
-<script>
+  <script>
+    // your entire JS here
 const TILE=32,COLS=15,ROWS=15;
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
 cv.width=COLS*TILE; cv.height=ROWS*TILE;
@@ -471,4 +463,13 @@ cv.addEventListener('touchend',e=>{
   if(Math.abs(dx)>Math.abs(dy))tryMove(dx>0?1:-1,0);else tryMove(0,dy>0?1:-1);
   e.preventDefault();
 },{passive:false});
-</script>
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
