@@ -1,0 +1,456 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0a0a0f; color: #e0d8c0; font-family: 'Courier New', monospace; user-select: none; }
+#app { display: flex; flex-direction: column; align-items: center; padding: 16px; }
+h1 { font-size: 20px; font-weight: 500; color: #c9a84c; letter-spacing: 2px; margin-bottom: 12px; text-transform: uppercase; }
+#game-area { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+#canvas-wrap { border: 1px solid #3a3020; }
+canvas { display: block; image-rendering: pixelated; }
+#sidebar { width: 200px; display: flex; flex-direction: column; gap: 8px; }
+.panel { background: #12100a; border: 1px solid #3a3020; border-radius: 6px; padding: 10px 12px; }
+.panel-title { font-size: 11px; color: #7a6a40; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.stat-row { display: flex; justify-content: space-between; font-size: 13px; margin: 3px 0; }
+.stat-label { color: #8a7a5a; }
+.stat-val { color: #e0d8c0; font-weight: 500; }
+.bar-wrap { height: 7px; border-radius: 4px; margin: 3px 0 7px; overflow: hidden; }
+.hp-bg { background: #2a1a1a; } .hp-fill { height: 100%; background: #b03030; border-radius: 4px; transition: width 0.3s; }
+.xp-bg { background: #1a1a2a; } .xp-fill { height: 100%; background: #5050b0; border-radius: 4px; transition: width 0.3s; }
+#log { height: 120px; overflow-y: auto; font-size: 12px; line-height: 1.6; }
+#log p { margin: 0; padding: 1px 0; border-bottom: 1px solid #1a1810; }
+.log-dmg { color: #e06050; } .log-good { color: #60c060; } .log-item { color: #c9a84c; } .log-info { color: #7090b0; } .log-death { color: #ff4444; font-weight: 500; }
+#controls { font-size: 12px; color: #5a5040; text-align: center; margin-top: 6px; line-height: 1.8; }
+#inv-slots { display: flex; flex-wrap: wrap; gap: 4px; }
+.inv-slot { width: 26px; height: 26px; background: #1a1810; border: 1px solid #3a3020; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 15px; position: relative; cursor: default; }
+.inv-slot.equipped { border-color: #c9a84c; }
+.tip { display: none; position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: #0a0a0f; border: 1px solid #5a4020; border-radius: 4px; padding: 3px 7px; font-size: 11px; color: #e0d8c0; white-space: nowrap; z-index: 20; pointer-events: none; }
+.inv-slot:hover .tip { display: block; }
+#overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.88); display: flex; align-items: center; justify-content: center; z-index: 30; }
+.modal { background: #12100a; border: 1px solid #5a4020; border-radius: 8px; padding: 28px 36px; text-align: center; max-width: 300px; }
+.modal h2 { font-size: 26px; color: #c9a84c; margin-bottom: 8px; }
+.modal p { color: #8a7a5a; font-size: 13px; margin-bottom: 18px; line-height: 1.6; }
+.btn { background: #2a2010; border: 1px solid #6a5030; color: #c9a84c; padding: 9px 24px; font-family: 'Courier New', monospace; font-size: 13px; cursor: pointer; border-radius: 4px; letter-spacing: 1px; }
+.btn:hover { background: #3a2e18; }
+
+#battle-screen { display: none; background: #0d0b07; border: 2px solid #5a4020; border-radius: 8px; width: 480px; padding: 0; overflow: hidden; }
+#battle-screen.active { display: block; }
+#battle-header { background: #1a1510; padding: 8px 16px; font-size: 13px; color: #c9a84c; letter-spacing: 1px; border-bottom: 1px solid #3a2810; text-align: center; text-transform: uppercase; }
+#battle-field { display: flex; justify-content: space-between; align-items: flex-end; padding: 16px 24px; background: #0f0d08; min-height: 160px; }
+.combatant { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 140px; }
+.sprite { font-size: 56px; line-height: 1; text-align: center; }
+.sprite.shake { animation: shake 0.3s; }
+.sprite.flash { animation: flash 0.3s; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+@keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.2} }
+.c-name { font-size: 13px; font-weight: 500; color: #e0d8c0; text-align: center; }
+.c-hp-bar { width: 120px; height: 10px; background: #2a1a1a; border-radius: 5px; overflow: hidden; border: 1px solid #3a2020; }
+.c-hp-fill { height: 100%; background: #5cd060; border-radius: 5px; transition: width 0.4s; }
+.c-hp-fill.mid { background: #d0c040; }
+.c-hp-fill.low { background: #d04040; }
+.c-hp-text { font-size: 11px; color: #8a7a5a; text-align: center; }
+#battle-log { background: #0a0908; border-top: 1px solid #2a2010; border-bottom: 1px solid #2a2010; min-height: 48px; padding: 8px 16px; font-size: 13px; line-height: 1.6; color: #c8b880; text-align: center; }
+#battle-actions { display: flex; gap: 8px; padding: 12px 16px; background: #0d0b07; flex-wrap: wrap; justify-content: center; }
+.battle-btn { background: #1e1a10; border: 1px solid #5a4020; color: #c9a84c; padding: 8px 18px; font-family: 'Courier New', monospace; font-size: 13px; cursor: pointer; border-radius: 4px; flex: 1; min-width: 90px; }
+.battle-btn:hover:not(:disabled) { background: #2e2818; }
+.battle-btn:disabled { opacity: 0.4; cursor: default; }
+.battle-btn.flee { color: #a07040; border-color: #4a3820; }
+.battle-btn.potion { color: #60a060; border-color: #305030; }
+.dmg-popup { position: absolute; pointer-events: none; font-size: 18px; font-weight: 500; animation: popUp 0.8s ease-out forwards; z-index: 50; }
+@keyframes popUp { 0%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-40px)} }
+</style>
+
+<div id="app">
+  <h1>⚔ Dungeon Depths</h1>
+  <div id="game-area">
+    <div>
+      <div id="canvas-wrap"><canvas id="c" width="480" height="480"></canvas></div>
+      <div id="battle-screen">
+        <div id="battle-header">Battle!</div>
+        <div id="battle-field" style="position:relative;">
+          <div class="combatant">
+            <div class="sprite" id="b-player-sprite">🧙</div>
+            <div class="c-name" id="b-player-name">Hero</div>
+            <div class="c-hp-bar"><div class="c-hp-fill" id="b-player-hp-fill" style="width:100%"></div></div>
+            <div class="c-hp-text" id="b-player-hp-text">30 / 30</div>
+          </div>
+          <div style="font-size:13px;color:#5a4a30;align-self:center;">VS</div>
+          <div class="combatant">
+            <div class="sprite" id="b-enemy-sprite">👺</div>
+            <div class="c-name" id="b-enemy-name">Goblin</div>
+            <div class="c-hp-bar"><div class="c-hp-fill" id="b-enemy-hp-fill" style="width:100%"></div></div>
+            <div class="c-hp-text" id="b-enemy-hp-text">8 / 8</div>
+          </div>
+        </div>
+        <div id="battle-log">A wild encounter begins!</div>
+        <div id="battle-actions">
+          <button class="battle-btn" id="btn-attack">⚔ Attack</button>
+          <button class="battle-btn" id="btn-heavy">💥 Heavy Strike</button>
+          <button class="battle-btn potion" id="btn-potion">🧪 Use Potion</button>
+          <button class="battle-btn flee" id="btn-flee">💨 Flee</button>
+        </div>
+      </div>
+    </div>
+    <div id="sidebar">
+      <div class="panel">
+        <div class="panel-title">Hero</div>
+        <div class="stat-row"><span class="stat-label">HP</span><span class="stat-val" id="s-hp">30/30</span></div>
+        <div class="bar-wrap hp-bg"><div class="hp-fill" id="hp-fill" style="width:100%"></div></div>
+        <div class="stat-row"><span class="stat-label">Level</span><span class="stat-val" id="s-lvl">1</span></div>
+        <div class="bar-wrap xp-bg"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div>
+        <div class="stat-row"><span class="stat-label">Attack</span><span class="stat-val" id="s-atk">4</span></div>
+        <div class="stat-row"><span class="stat-label">Defense</span><span class="stat-val" id="s-def">0</span></div>
+        <div class="stat-row"><span class="stat-label">Gold</span><span class="stat-val" id="s-gold">0 ✦</span></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Inventory</div>
+        <div id="inv-slots"></div>
+      </div>
+      <div class="panel" style="font-size:13px;color:#c9a84c;text-align:center;" id="floor-badge">Floor 1</div>
+      <div class="panel">
+        <div class="panel-title">Log</div>
+        <div id="log"></div>
+      </div>
+    </div>
+  </div>
+  <div id="controls">Move: WASD / Arrow Keys &nbsp;|&nbsp; Walk into enemies to fight</div>
+</div>
+
+<div id="overlay">
+  <div class="modal" id="modal">
+    <h2>Dungeon Depths</h2>
+    <p>Explore procedural floors.<br>Battle monsters in turn-based combat.<br>Find the stairs. Survive.</p>
+    <button class="btn" id="start-btn">Begin Descent</button>
+  </div>
+</div>
+
+<script>
+const TILE=32,COLS=15,ROWS=15;
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+cv.width=COLS*TILE; cv.height=ROWS*TILE;
+
+const T={WALL:0,FLOOR:1,STAIRS:2};
+let map,player,enemies,items,floor,running=false,inBattle=false,battleEnemy=null,heavyCooldown=0,canAct=true;
+
+const logEl=document.getElementById('log');
+function addLog(msg,cls=''){
+  const p=document.createElement('p');p.className=cls;p.textContent=msg;
+  logEl.appendChild(p);
+  if(logEl.children.length>80)logEl.removeChild(logEl.firstChild);
+  logEl.scrollTop=logEl.scrollHeight;
+}
+
+function rng(n){return Math.floor(Math.random()*n);}
+function rng2(a,b){return a+rng(b-a+1);}
+
+function genMap(){
+  const m=Array.from({length:ROWS},()=>Array(COLS).fill(T.WALL));
+  const rooms=[];
+  for(let i=0;i<60;i++){
+    const w=rng2(3,7),h=rng2(3,6),x=rng2(1,COLS-w-1),y=rng2(1,ROWS-h-1);
+    let ok=true;
+    for(const r of rooms)if(x<r.x+r.w+1&&x+w+1>r.x&&y<r.y+r.h+1&&y+h+1>r.y){ok=false;break;}
+    if(ok){rooms.push({x,y,w,h});for(let ry=y;ry<y+h;ry++)for(let rx=x;rx<x+w;rx++)m[ry][rx]=T.FLOOR;}
+  }
+  for(let i=1;i<rooms.length;i++){
+    const a=rooms[i-1],b=rooms[i];
+    let cx=a.x+Math.floor(a.w/2),cy=a.y+Math.floor(a.h/2);
+    const bx=b.x+Math.floor(b.w/2),by=b.y+Math.floor(b.h/2);
+    while(cx!==bx){m[cy][cx]=T.FLOOR;cx+=cx<bx?1:-1;}
+    while(cy!==by){m[cy][cx]=T.FLOOR;cy+=cy<by?1:-1;}
+  }
+  const last=rooms[rooms.length-1];
+  const sx=last.x+Math.floor(last.w/2),sy=last.y+Math.floor(last.h/2);
+  m[sy][sx]=T.STAIRS;
+  return{m,rooms};
+}
+
+const ETYPES=[
+  {name:'Goblin',sym:'👺',hp:10,atk:4,def:0,xp:5,floor:1},
+  {name:'Orc',sym:'👹',hp:22,atk:7,def:2,xp:12,floor:2},
+  {name:'Skeleton',sym:'💀',hp:16,atk:6,def:1,xp:10,floor:2},
+  {name:'Troll',sym:'🧟',hp:36,atk:10,def:4,xp:22,floor:3},
+  {name:'Demon',sym:'😈',hp:50,atk:14,def:6,xp:38,floor:4},
+];
+
+const ITYPES=[
+  {name:'Health Potion',sym:'🧪',col:'#e06070',type:'potion',val:20},
+  {name:'Big Potion',sym:'💉',col:'#ff6090',type:'potion',val:40},
+  {name:'Short Sword',sym:'🗡',col:'#a0b0d0',type:'weapon',atk:3},
+  {name:'Long Sword',sym:'⚔',col:'#c0d0f0',type:'weapon',atk:6},
+  {name:'Battle Axe',sym:'🪓',col:'#e0a060',type:'weapon',atk:10},
+  {name:'Leather Armor',sym:'🧥',col:'#c0a060',type:'armor',def:2},
+  {name:'Chain Mail',sym:'🛡',col:'#b0b8c8',type:'armor',def:5},
+  {name:'Gold Pile',sym:'✦',col:'#e0c040',type:'gold',val:10},
+  {name:'Scroll of Power',sym:'📜',col:'#d0b080',type:'scroll',atk:3},
+];
+
+function initGame(){
+  floor=1;
+  player={x:0,y:0,hp:30,maxHp:30,atk:4,def:0,level:1,xp:0,xpNext:20,gold:0,weapon:null,armor:null,inventory:[]};
+  enemies=[];items=[];
+  newFloor();
+}
+
+function newFloor(){
+  const{m,rooms}=genMap();
+  map=m;enemies=[];items=[];
+  const sr=rooms[0];
+  player.x=sr.x+Math.floor(sr.w/2);player.y=sr.y+Math.floor(sr.h/2);
+  const elig=ETYPES.filter(e=>e.floor<=floor);
+  for(let i=0;i<2+floor*2+rng(3);i++){
+    const t=elig[rng(elig.length)];
+    let ex,ey,tr=0;
+    do{const r=rooms[1+rng(rooms.length-1)];ex=r.x+rng(r.w);ey=r.y+rng(r.h);tr++;}
+    while(tr<50&&(map[ey][ex]!==T.FLOOR||enemies.some(e=>e.x===ex&&e.y===ey)));
+    if(tr<50)enemies.push({...t,hp:t.hp+floor*3,maxHp:t.hp+floor*3,x:ex,y:ey,id:Math.random()});
+  }
+  for(let i=0;i<2+rng(4);i++){
+    const t=ITYPES[rng(ITYPES.length)];
+    let ix,iy,tr=0;
+    do{const r=rooms[1+rng(rooms.length-1)];ix=r.x+rng(r.w);iy=r.y+rng(r.h);tr++;}
+    while(tr<50&&(map[iy][ix]!==T.FLOOR||items.some(it=>it.x===ix&&it.y===iy)));
+    if(tr<50)items.push({...t,x:ix,y:iy,id:Math.random()});
+  }
+  addLog(`You descend to floor ${floor}.`,'log-info');
+  updateUI();draw();
+}
+
+function updateUI(){
+  document.getElementById('s-hp').textContent=`${player.hp}/${player.maxHp}`;
+  document.getElementById('hp-fill').style.width=`${Math.max(0,player.hp/player.maxHp*100)}%`;
+  document.getElementById('s-lvl').textContent=player.level;
+  document.getElementById('xp-fill').style.width=`${player.xp/player.xpNext*100}%`;
+  const totalAtk=player.atk+(player.weapon?player.weapon.atk:0);
+  const totalDef=player.def+(player.armor?player.armor.def:0);
+  document.getElementById('s-atk').textContent=player.weapon?`${totalAtk} (+${player.weapon.atk})`:`${totalAtk}`;
+  document.getElementById('s-def').textContent=player.armor?`${totalDef} (+${player.armor.def})`:`${totalDef}`;
+  document.getElementById('s-gold').textContent=`${player.gold} ✦`;
+  document.getElementById('floor-badge').textContent=`Floor ${floor}`;
+  const inv=document.getElementById('inv-slots');inv.innerHTML='';
+  const all=[player.weapon,player.armor,...player.inventory].filter(Boolean);
+  for(const it of all){
+    const s=document.createElement('div');s.className='inv-slot'+(it===player.weapon||it===player.armor?' equipped':'');
+    s.textContent=it.sym;s.style.color=it.col||'#e0d8c0';
+    const tip=document.createElement('div');tip.className='tip';
+    tip.textContent=it.name+(it.atk?` +${it.atk}ATK`:it.def?` +${it.def}DEF`:it.val?` +${it.val}`:'')+((it===player.weapon||it===player.armor)?' [E]':'');
+    s.appendChild(tip);inv.appendChild(s);
+  }
+  if(inBattle&&battleEnemy){
+    const e=battleEnemy;
+    document.getElementById('b-player-hp-text').textContent=`${player.hp} / ${player.maxHp}`;
+    const ppct=Math.max(0,player.hp/player.maxHp*100);
+    const pf=document.getElementById('b-player-hp-fill');
+    pf.style.width=ppct+'%';
+    pf.className='c-hp-fill'+(ppct<25?' low':ppct<50?' mid':'');
+    document.getElementById('b-enemy-hp-text').textContent=`${Math.max(0,e.hp)} / ${e.maxHp}`;
+    const epct=Math.max(0,e.hp/e.maxHp*100);
+    const ef=document.getElementById('b-enemy-hp-fill');
+    ef.style.width=epct+'%';
+    ef.className='c-hp-fill'+(epct<25?' low':epct<50?' mid':'');
+    const potions=player.inventory.filter(i=>i.type==='potion');
+    document.getElementById('btn-potion').disabled=potions.length===0;
+    document.getElementById('btn-heavy').disabled=heavyCooldown>0;
+    document.getElementById('btn-heavy').textContent=heavyCooldown>0?`💥 Heavy (${heavyCooldown})`:'💥 Heavy Strike';
+  }
+}
+
+function setBattleLog(msg){document.getElementById('battle-log').textContent=msg;}
+
+function startBattle(enemy){
+  inBattle=true;battleEnemy=enemy;heavyCooldown=0;canAct=true;
+  document.getElementById('c').style.display='none';
+  document.getElementById('battle-screen').classList.add('active');
+  document.getElementById('b-enemy-sprite').textContent=enemy.sym;
+  document.getElementById('b-enemy-name').textContent=enemy.name;
+  document.getElementById('b-player-name').textContent=`Hero Lv.${player.level}`;
+  setBattleLog(`A wild ${enemy.name} appears!`);
+  updateUI();
+}
+
+function endBattle(won){
+  inBattle=false;battleEnemy=null;
+  document.getElementById('battle-screen').classList.remove('active');
+  document.getElementById('c').style.display='block';
+  if(won){
+    updateUI();draw();
+  }
+}
+
+function animateSprite(id,cls){
+  const el=document.getElementById(id);
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+  setTimeout(()=>el.classList.remove(cls),400);
+}
+
+function doPlayerAttack(multiplier=1,isHeavy=false){
+  if(!canAct)return;
+  canAct=false;
+  const e=battleEnemy;
+  const totalAtk=player.atk+(player.weapon?player.weapon.atk:0);
+  const dmg=Math.max(1,Math.floor((totalAtk-e.def+rng2(-1,2))*multiplier));
+  e.hp-=dmg;
+  if(isHeavy)heavyCooldown=3;
+  animateSprite('b-enemy-sprite','shake');
+  const verb=isHeavy?'heavy strike':'attack';
+  setBattleLog(`You use ${verb} on ${e.name} for ${dmg} damage!`);
+  updateUI();
+  if(e.hp<=0){
+    setTimeout(()=>{
+      setBattleLog(`You defeated the ${e.name}! +${e.xp} XP`);
+      player.xp+=e.xp;
+      if(rng(3)===0){const g=rng2(2,8)+floor;player.gold+=g;addLog(`${e.name} dropped ${g} gold! ✦`,'log-item');}
+      enemies=enemies.filter(en=>en!==e);
+      checkLevelUp();
+      addLog(`Defeated ${e.name}! +${e.xp} XP`,'log-good');
+      setTimeout(()=>endBattle(true),900);
+    },400);
+    return;
+  }
+  setTimeout(()=>doEnemyTurn(),700);
+}
+
+function doEnemyTurn(){
+  const e=battleEnemy;
+  if(!e||e.hp<=0)return;
+  if(heavyCooldown>0)heavyCooldown--;
+  const totalDef=player.def+(player.armor?player.armor.def:0);
+  const dmg=Math.max(0,e.atk-totalDef+rng2(-1,2));
+  player.hp=Math.max(0,player.hp-dmg);
+  animateSprite('b-player-sprite','flash');
+  if(dmg>0)setBattleLog(`${e.name} attacks you for ${dmg} damage!`);
+  else setBattleLog(`${e.name} attacks but your armor blocks it!`);
+  updateUI();
+  if(player.hp<=0){
+    setTimeout(()=>{
+      setBattleLog(`You have been defeated...`);
+      addLog(`You were slain by a ${e.name} on floor ${floor}.`,'log-death');
+      setTimeout(()=>{
+        endBattle(false);
+        const m=document.getElementById('modal');
+        m.querySelector('h2').textContent='Defeated';
+        m.querySelector('p').innerHTML=`Slain by a ${e.name} on floor ${floor}<br>Level ${player.level} • ${player.gold} gold`;
+        m.querySelector('button').textContent='Try Again';
+        document.getElementById('overlay').style.display='flex';
+      },900);
+    },400);
+    return;
+  }
+  canAct=true;
+}
+
+document.getElementById('btn-attack').addEventListener('click',()=>{if(canAct)doPlayerAttack(1,false);});
+document.getElementById('btn-heavy').addEventListener('click',()=>{if(canAct&&heavyCooldown===0)doPlayerAttack(2,true);});
+document.getElementById('btn-potion').addEventListener('click',()=>{
+  if(!canAct)return;
+  const potions=player.inventory.filter(i=>i.type==='potion');
+  if(potions.length===0)return;
+  const pot=potions[0];
+  player.inventory=player.inventory.filter(i=>i!==pot);
+  const healed=Math.min(pot.val,player.maxHp-player.hp);
+  player.hp=Math.min(player.maxHp,player.hp+pot.val);
+  setBattleLog(`You use ${pot.name} and recover ${healed} HP!`);
+  animateSprite('b-player-sprite','flash');
+  updateUI();
+  canAct=false;
+  setTimeout(()=>doEnemyTurn(),700);
+});
+document.getElementById('btn-flee').addEventListener('click',()=>{
+  if(!canAct)return;
+  if(rng(2)===0){
+    addLog(`You fled from the ${battleEnemy.name}.`,'log-info');
+    setBattleLog(`You successfully fled!`);
+    setTimeout(()=>endBattle(false),600);
+  } else {
+    setBattleLog(`You tried to flee but couldn't escape!`);
+    canAct=false;
+    setTimeout(()=>doEnemyTurn(),700);
+  }
+});
+
+function checkLevelUp(){
+  while(player.xp>=player.xpNext){
+    player.xp-=player.xpNext;player.level++;player.xpNext=Math.floor(player.xpNext*1.5);
+    player.maxHp+=10;player.hp=Math.min(player.maxHp,player.hp+10);player.atk+=2;
+    addLog(`Level up! Now level ${player.level}. HP+10, ATK+2`,'log-good');
+  }
+}
+
+function pickupItem(item){
+  items=items.filter(i=>i!==item);
+  if(item.type==='potion'){player.inventory.push(item);addLog(`Picked up ${item.name}.`,'log-item');}
+  else if(item.type==='weapon'){if(player.weapon)player.inventory.push(player.weapon);player.weapon=item;addLog(`Equipped ${item.name} (+${item.atk} ATK)`,'log-item');}
+  else if(item.type==='armor'){if(player.armor)player.inventory.push(player.armor);player.armor=item;addLog(`Equipped ${item.name} (+${item.def} DEF)`,'log-item');}
+  else if(item.type==='gold'){player.gold+=item.val;addLog(`Picked up ${item.val} gold ✦`,'log-item');}
+  else if(item.type==='scroll'){player.atk+=item.atk;addLog(`Scroll of Power! +${item.atk} ATK permanently`,'log-item');}
+}
+
+function tryMove(dx,dy){
+  if(inBattle)return;
+  const nx=player.x+dx,ny=player.y+dy;
+  if(nx<0||ny<0||nx>=COLS||ny>=ROWS||map[ny][nx]===T.WALL)return;
+  const enemy=enemies.find(e=>e.x===nx&&e.y===ny);
+  if(enemy){startBattle(enemy);return;}
+  player.x=nx;player.y=ny;
+  const item=items.find(i=>i.x===nx&&i.y===ny);
+  if(item)pickupItem(item);
+  if(map[ny][nx]===T.STAIRS){floor++;addLog(`Descending to floor ${floor}...`,'log-info');newFloor();return;}
+  passiveEnemyMove();
+  updateUI();draw();
+}
+
+function passiveEnemyMove(){
+  for(const e of enemies){
+    const dx=player.x-e.x,dy=player.y-e.y;
+    if(Math.abs(dx)+Math.abs(dy)<=6){
+      const mx=Math.abs(dx)>=Math.abs(dy)?(dx>0?1:-1):0;
+      const my=Math.abs(dy)>Math.abs(dx)?(dy>0?1:-1):0;
+      const nx=e.x+mx,ny=e.y+my;
+      if(nx>=0&&ny>=0&&nx<COLS&&ny<ROWS&&map[ny][nx]!==T.WALL&&!enemies.some(o=>o!==e&&o.x===nx&&o.y===ny)&&!(nx===player.x&&ny===player.y)){
+        e.x=nx;e.y=ny;
+      }
+    }
+  }
+}
+
+function draw(){
+  ctx.fillStyle='#0a0a0f';ctx.fillRect(0,0,cv.width,cv.height);
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    const t=map[y][x],px=x*TILE,py=y*TILE;
+    if(t===T.WALL){ctx.fillStyle='#1a1612';ctx.fillRect(px,py,TILE,TILE);ctx.fillStyle='#221e18';ctx.fillRect(px,py,TILE,1);ctx.fillRect(px,py,1,TILE);}
+    else{ctx.fillStyle=(x+y)%2===0?'#151210':'#161411';ctx.fillRect(px,py,TILE,TILE);}
+    if(t===T.STAIRS){ctx.fillStyle='#3a6040';ctx.font='20px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('>',px+TILE/2,py+TILE/2);}
+  }
+  ctx.font='18px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  for(const it of items){ctx.fillStyle='#151210';ctx.fillRect(it.x*TILE,it.y*TILE,TILE,TILE);ctx.fillText(it.sym,it.x*TILE+TILE/2,it.y*TILE+TILE/2);}
+  ctx.font='20px serif';
+  for(const e of enemies){
+    ctx.fillText(e.sym,e.x*TILE+TILE/2,e.y*TILE+TILE/2);
+    const bx=e.x*TILE+3,by=e.y*TILE+TILE-5,bw=TILE-6;
+    ctx.fillStyle='#2a1a1a';ctx.fillRect(bx,by,bw,3);
+    ctx.fillStyle='#b03030';ctx.fillRect(bx,by,bw*(e.hp/e.maxHp),3);
+  }
+  ctx.font='bold 22px serif';ctx.fillText('🧙',player.x*TILE+TILE/2,player.y*TILE+TILE/2);
+}
+
+document.getElementById('start-btn').addEventListener('click',()=>{
+  document.getElementById('overlay').style.display='none';
+  initGame();running=true;
+});
+
+document.addEventListener('keydown',e=>{
+  if(!running||inBattle)return;
+  const k={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]};
+  if(k[e.key]){e.preventDefault();const[dx,dy]=k[e.key];tryMove(dx,dy);}
+});
+
+let tx=0,ty=0;
+cv.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY;e.preventDefault();},{passive:false});
+cv.addEventListener('touchend',e=>{
+  if(!running||inBattle)return;
+  const dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;
+  if(Math.abs(dx)>Math.abs(dy))tryMove(dx>0?1:-1,0);else tryMove(0,dy>0?1:-1);
+  e.preventDefault();
+},{passive:false});
+</script>
